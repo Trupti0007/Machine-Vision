@@ -1,1 +1,0 @@
-pip install streamlit ultralytics opencv-python pandas moviepy numpy
