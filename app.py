@@ -1,53 +1,46 @@
 import streamlit as st
-from ultralytics import YOLO
 import cv2
 import tempfile
-import numpy as np
+from detect import detect_products
+from barcode import scan_barcode
 
-st.set_page_config(page_title="Bat Detection System")
+st.title("Cricket Inventory AI System")
 
-st.title("AI Bat Detection System")
+uploaded_video = st.file_uploader("Upload Warehouse Video")
 
-# Load YOLO model
-model = YOLO("model.pt")
+if uploaded_video:
 
-uploaded_video = st.file_uploader("Upload Video", type=["mp4", "mov", "avi"])
+    temp = tempfile.NamedTemporaryFile(delete=False)
+    temp.write(uploaded_video.read())
 
-if uploaded_video is not None:
+    cap = cv2.VideoCapture(temp.name)
 
-    # Save uploaded video temporarily
-    temp_video = tempfile.NamedTemporaryFile(delete=False)
-    temp_video.write(uploaded_video.read())
+    inventory = {}
 
-    cap = cv2.VideoCapture(temp_video.name)
-
-    frame_placeholder = st.empty()
-    count_placeholder = st.empty()
-
-    total_objects = 0
+    frame_area = st.empty()
 
     while cap.isOpened():
+
         ret, frame = cap.read()
 
         if not ret:
             break
 
-        # Run YOLO detection
-        results = model(frame)
+        detections = detect_products(frame)
 
-        boxes = results[0].boxes
-        total_objects += len(boxes)
+        for item in detections:
 
-        # Draw bounding boxes
-        annotated_frame = results[0].plot()
+            if item not in inventory:
+                inventory[item] = 0
 
-        # Convert BGR → RGB
-        annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
+            inventory[item] += 1
 
-        frame_placeholder.image(annotated_frame, channels="RGB")
+        barcodes = scan_barcode(frame)
 
-        count_placeholder.write(f"Detected objects: {len(boxes)}")
+        frame_area.image(frame, channels="BGR")
 
     cap.release()
 
-    st.success(f"Total objects detected in video: {total_objects}")
+    st.subheader("Inventory Count")
+
+    st.write(inventory)
