@@ -1,8 +1,9 @@
 streamlit
 ultralytics
 opencv-python-headless
-numpy
 pillow
+numpy
+pandas
+pyzbar
 torch
 torchvision
-pyzbar
