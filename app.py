@@ -161,7 +161,7 @@ if uploaded_file:
     # Processing trigger
     if not st.session_state.processed:
         with st.spinner("Analyzing video with YOLOv8..."):
-            model = YOLO("yolov8n.pt") # Loads the lightweight YOLOv8 model
+            model = YOLO("yolov8n.pt", task="detect") # Loads the lightweight YOLOv8 model
             knowledge_df = load_knowledge()
             
             crops, brands = process_video(
