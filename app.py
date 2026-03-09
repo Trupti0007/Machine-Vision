@@ -1,45 +1,63 @@
 import streamlit as st
 from ultralytics import YOLO
-import pandas as pd
 from PIL import Image
-import numpy as np
+
+st.set_page_config(page_title="Cricket Bat AI Detector")
 
 st.title("🏏 Cricket Bat Detection System")
 
-st.write("Upload an image of bats and the AI will count them.")
+model = YOLO("yolov8n.pt")
 
-uploaded_file = st.file_uploader("Upload Image", type=["jpg","png","jpeg"])
+menu = st.sidebar.selectbox(
+    "Select Mode",
+    ["Image Detection","Video Detection"]
+)
 
-if uploaded_file is not None:
+# ---------- IMAGE DETECTION ----------
+if menu == "Image Detection":
 
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+    st.header("Upload Bat Image")
 
-    st.write("Detecting bats...")
+    uploaded_file = st.file_uploader("Upload Image", type=["jpg","jpeg","png"])
 
-    model = YOLO("yolov8n.pt")
+    if uploaded_file:
 
-    results = model(image)
+        image = Image.open(uploaded_file)
 
-    boxes = results[0].boxes
+        st.image(image, caption="Uploaded Image", use_column_width=True)
 
-    count = len(boxes)
+        results = model(image)
 
-    st.success(f"Total Objects Detected: {count}")
+        boxes = results[0].boxes
+        count = len(boxes)
 
-    brands = ["SS","SG","MRF","Other"]
+        st.success(f"Bats Detected: {count}")
 
-    brand = st.selectbox("Select Bat Brand", brands)
+        brand = st.selectbox(
+            "Select Bat Brand",
+            ["SS","SG","MRF","Other"]
+        )
 
-    if st.button("Save Inventory"):
+        if st.button("Confirm Brand"):
+            st.success(f"{count} bats recorded as {brand}")
 
-        data = {
-            "Brand":[brand],
-            "Quantity":[count]
-        }
+# ---------- VIDEO DETECTION ----------
+if menu == "Video Detection":
 
-        df = pd.DataFrame(data)
+    st.header("Upload Bat Video")
 
-        df.to_csv("inventory.csv",mode="a",index=False,header=False)
+    video = st.file_uploader("Upload Video", type=["mp4","mov","avi"])
 
-        st.success("Inventory saved successfully")
+    if video:
+
+        st.video(video)
+
+        if st.button("Analyze Video"):
+
+            st.info("Processing video...")
+
+            results = model.predict(source=video, save=False)
+
+            frames = len(results)
+
+            st.success(f"Frames analyzed: {frames}")
