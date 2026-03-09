@@ -5,3 +5,6 @@ numpy
 pillow
 torch
 torchvision
+pyzbar
+pandas
+sqlite3
