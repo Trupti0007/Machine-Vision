@@ -1,7 +1,6 @@
 from ultralytics import YOLO
-import cv2
 
-model = YOLO("models/cricket_model.pt")
+model = YOLO("yolov8n.pt")
 
 def detect_products(frame):
 
@@ -10,7 +9,9 @@ def detect_products(frame):
     detections = []
 
     for r in results:
+
         boxes = r.boxes
+
         for box in boxes:
 
             cls = int(box.cls)
