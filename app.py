@@ -21,14 +21,12 @@ if uploaded_video:
 
     inventory = {}
 
-    while cap.isOpened():
+    @st.cache_resource
+def load_model():
+    from ultralytics import YOLO
+    return YOLO("yolov8n.pt")
 
-        ret, frame = cap.read()
-
-        if not ret:
-            break
-
-        detections = detect_products(frame)
+model = load_model()
 
         for item in detections:
 
