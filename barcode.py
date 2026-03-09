@@ -1,4 +1,3 @@
-import cv2
 from pyzbar.pyzbar import decode
 
 def scan_barcode(frame):
@@ -8,6 +7,7 @@ def scan_barcode(frame):
     codes = []
 
     for barcode in barcodes:
+
         code = barcode.data.decode("utf-8")
         codes.append(code)
 
