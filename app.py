@@ -1,118 +1,53 @@
 import streamlit as st
 from ultralytics import YOLO
-from PIL import Image
-import pandas as pd
-import tempfile
 import cv2
+import tempfile
+import numpy as np
 
-st.set_page_config(page_title="Cricket Bat AI System", layout="wide")
+st.set_page_config(page_title="Bat Detection System")
 
-st.title("🏏 Smart Cricket Bat Detection & Inventory")
+st.title("AI Bat Detection System")
 
-model = YOLO("yolov8n.pt")
+# Load YOLO model
+model = YOLO("model.pt")
 
-# Load brand memory
-try:
-    data = pd.read_csv("brands.csv")
-except:
-    data = pd.DataFrame(columns=["image","brand"])
+uploaded_video = st.file_uploader("Upload Video", type=["mp4", "mov", "avi"])
 
-menu = st.sidebar.selectbox(
-    "Mode",
-    ["Image Detection","Video Detection","Inventory"]
-)
+if uploaded_video is not None:
 
-# ---------------- IMAGE DETECTION ----------------
+    # Save uploaded video temporarily
+    temp_video = tempfile.NamedTemporaryFile(delete=False)
+    temp_video.write(uploaded_video.read())
 
-if menu == "Image Detection":
+    cap = cv2.VideoCapture(temp_video.name)
 
-    st.header("Upload Bat Image")
+    frame_placeholder = st.empty()
+    count_placeholder = st.empty()
 
-    file = st.file_uploader("Upload Image", type=["jpg","jpeg","png"])
+    total_objects = 0
 
-    if file:
+    while cap.isOpened():
+        ret, frame = cap.read()
 
-        image = Image.open(file)
+        if not ret:
+            break
 
-        st.image(image, use_column_width=True)
+        # Run YOLO detection
+        results = model(frame)
 
-        if st.button("Detect Bats"):
+        boxes = results[0].boxes
+        total_objects += len(boxes)
 
-            results = model(image)
+        # Draw bounding boxes
+        annotated_frame = results[0].plot()
 
-            boxes = results[0].boxes
-            count = len(boxes)
+        # Convert BGR → RGB
+        annotated_frame = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
 
-            st.success(f"Bats detected: {count}")
+        frame_placeholder.image(annotated_frame, channels="RGB")
 
-            brand = st.selectbox(
-                "Select Brand",
-                ["SS","SG","MRF","Other"]
-            )
+        count_placeholder.write(f"Detected objects: {len(boxes)}")
 
-            if st.button("Save Record"):
+    cap.release()
 
-                new = pd.DataFrame({
-                    "image":[file.name],
-                    "brand":[brand]
-                })
-
-                data2 = pd.concat([data,new])
-
-                data2.to_csv("brands.csv", index=False)
-
-                st.success("Saved to inventory memory")
-
-# ---------------- VIDEO DETECTION ----------------
-
-if menu == "Video Detection":
-
-    st.header("Upload Bat Video")
-
-    video = st.file_uploader("Upload Video", type=["mp4","avi","mov"])
-
-    if video:
-
-        st.video(video)
-
-        if st.button("Analyze Video"):
-
-            st.info("Processing...")
-
-            tfile = tempfile.NamedTemporaryFile(delete=False)
-            tfile.write(video.read())
-
-            cap = cv2.VideoCapture(tfile.name)
-
-            frames = 0
-            bats = 0
-
-            while cap.isOpened():
-
-                ret, frame = cap.read()
-
-                if not ret:
-                    break
-
-                frames += 1
-
-                results = model(frame)
-
-                bats += len(results[0].boxes)
-
-            cap.release()
-
-            st.success(f"Frames analyzed: {frames}")
-            st.success(f"Total bats detected: {bats}")
-
-# ---------------- INVENTORY ----------------
-
-if menu == "Inventory":
-
-    st.header("Bat Brand Records")
-
-    try:
-        inventory = pd.read_csv("brands.csv")
-        st.dataframe(inventory)
-    except:
-        st.warning("No inventory yet")
+    st.success(f"Total objects detected in video: {total_objects}")
