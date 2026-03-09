@@ -4,20 +4,22 @@ import tempfile
 from detect import detect_products
 from barcode import scan_barcode
 
-st.title("Cricket Inventory AI System")
+st.set_page_config(page_title="Cricket Inventory AI")
 
-uploaded_video = st.file_uploader("Upload Warehouse Video")
+st.title("Cricket Warehouse Inventory AI")
+
+uploaded_video = st.file_uploader("Upload Warehouse Video", type=["mp4","avi","mov"])
 
 if uploaded_video:
 
-    temp = tempfile.NamedTemporaryFile(delete=False)
-    temp.write(uploaded_video.read())
+    temp_file = tempfile.NamedTemporaryFile(delete=False)
+    temp_file.write(uploaded_video.read())
 
-    cap = cv2.VideoCapture(temp.name)
+    cap = cv2.VideoCapture(temp_file.name)
+
+    frame_window = st.empty()
 
     inventory = {}
-
-    frame_area = st.empty()
 
     while cap.isOpened():
 
@@ -37,7 +39,7 @@ if uploaded_video:
 
         barcodes = scan_barcode(frame)
 
-        frame_area.image(frame, channels="BGR")
+        frame_window.image(frame, channels="BGR")
 
     cap.release()
 
