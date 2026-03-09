@@ -1,52 +1,75 @@
 import streamlit as st
 from ultralytics import YOLO
 from PIL import Image
+import pandas as pd
+import tempfile
+import cv2
 
-st.set_page_config(page_title="Cricket Bat AI Detector")
+st.set_page_config(page_title="Cricket Bat AI System", layout="wide")
 
-st.title("🏏 Cricket Bat Detection System")
+st.title("🏏 Smart Cricket Bat Detection & Inventory")
 
 model = YOLO("yolov8n.pt")
 
+# Load brand memory
+try:
+    data = pd.read_csv("brands.csv")
+except:
+    data = pd.DataFrame(columns=["image","brand"])
+
 menu = st.sidebar.selectbox(
-    "Select Mode",
-    ["Image Detection","Video Detection"]
+    "Mode",
+    ["Image Detection","Video Detection","Inventory"]
 )
 
-# ---------- IMAGE DETECTION ----------
+# ---------------- IMAGE DETECTION ----------------
+
 if menu == "Image Detection":
 
     st.header("Upload Bat Image")
 
-    uploaded_file = st.file_uploader("Upload Image", type=["jpg","jpeg","png"])
+    file = st.file_uploader("Upload Image", type=["jpg","jpeg","png"])
 
-    if uploaded_file:
+    if file:
 
-        image = Image.open(uploaded_file)
+        image = Image.open(file)
 
-        st.image(image, caption="Uploaded Image", use_column_width=True)
+        st.image(image, use_column_width=True)
 
-        results = model(image)
+        if st.button("Detect Bats"):
 
-        boxes = results[0].boxes
-        count = len(boxes)
+            results = model(image)
 
-        st.success(f"Bats Detected: {count}")
+            boxes = results[0].boxes
+            count = len(boxes)
 
-        brand = st.selectbox(
-            "Select Bat Brand",
-            ["SS","SG","MRF","Other"]
-        )
+            st.success(f"Bats detected: {count}")
 
-        if st.button("Confirm Brand"):
-            st.success(f"{count} bats recorded as {brand}")
+            brand = st.selectbox(
+                "Select Brand",
+                ["SS","SG","MRF","Other"]
+            )
 
-# ---------- VIDEO DETECTION ----------
+            if st.button("Save Record"):
+
+                new = pd.DataFrame({
+                    "image":[file.name],
+                    "brand":[brand]
+                })
+
+                data2 = pd.concat([data,new])
+
+                data2.to_csv("brands.csv", index=False)
+
+                st.success("Saved to inventory memory")
+
+# ---------------- VIDEO DETECTION ----------------
+
 if menu == "Video Detection":
 
     st.header("Upload Bat Video")
 
-    video = st.file_uploader("Upload Video", type=["mp4","mov","avi"])
+    video = st.file_uploader("Upload Video", type=["mp4","avi","mov"])
 
     if video:
 
@@ -54,10 +77,42 @@ if menu == "Video Detection":
 
         if st.button("Analyze Video"):
 
-            st.info("Processing video...")
+            st.info("Processing...")
 
-            results = model.predict(source=video, save=False)
+            tfile = tempfile.NamedTemporaryFile(delete=False)
+            tfile.write(video.read())
 
-            frames = len(results)
+            cap = cv2.VideoCapture(tfile.name)
+
+            frames = 0
+            bats = 0
+
+            while cap.isOpened():
+
+                ret, frame = cap.read()
+
+                if not ret:
+                    break
+
+                frames += 1
+
+                results = model(frame)
+
+                bats += len(results[0].boxes)
+
+            cap.release()
 
             st.success(f"Frames analyzed: {frames}")
+            st.success(f"Total bats detected: {bats}")
+
+# ---------------- INVENTORY ----------------
+
+if menu == "Inventory":
+
+    st.header("Bat Brand Records")
+
+    try:
+        inventory = pd.read_csv("brands.csv")
+        st.dataframe(inventory)
+    except:
+        st.warning("No inventory yet")
